@@ -132,16 +132,35 @@ class environment:
 
 #os.listdir(...)
 
-camp_n = ['1458', '2259', '2261', '2821']
+camp_n = ['1458', '2259', '2261', '2821', '2997', '3358', '3386', '3427', '3476']
 data_type = ['test.theta', 'train.theta']
-imported_files = []
+training_files = []
+test_files = []
 
 for i in camp_n:
-    for j in data_type:
-        imported_files.append(open(os.path.join\
+    training_files.append(open(os.path.join\
                             ('', 
-                             j+'_'+i+'.txt')))
-        
+                             'train.theta'+'_'+i+'.txt')))
+    test_files.append(open(os.path.join\
+                            ('', 
+                             'test.theta'+'_'+i+'.txt')))
+
+training = []
+
+for i in training_files:
+    T = i.read().split(' ')
+    T.pop(0)
+#    training.append[T]
+#    
+#for i in range(len(training)):
+#    for j in range(len(training[i])):
+#        if (j % 2 == 0):
+#            training[i][j] = float(training[i][j][:-2])
+#        else:
+#            training[i][j] = float(training[i][j])
+#    
+
+
 ###EXPERIMENTS-----------------------------------------------------------------
 
 #convolutional_neural_network = True        
