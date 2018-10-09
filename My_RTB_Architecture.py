@@ -76,10 +76,10 @@ class environment:
                                  self.Lambda])
         
         reward = 0
-        #We also need to consider the cost?
-        termination = False
+        #We also need to consider the cost
+        self.termination = False
 
-        return (self.state, reward, termination)        
+        return (self.state, reward, self.termination)        
             
     
     def step(self, action_index):
