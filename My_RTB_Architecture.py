@@ -132,12 +132,8 @@ class environment:
 
 #os.listdir(...)
 
-<<<<<<< HEAD
+
 camp_n = ['1458', '2259', '2261', '2821', '2997', '3358', '3386', '3427', '3476']
-=======
-#We import the campaigns from the iPinYou dataset.
-camp_n = ['1458', '2259', '2261', '2821']
->>>>>>> 295d9816415a69a7fd60dd6eae65053a5e43a220
 data_type = ['test.theta', 'train.theta']
 training_files = []
 test_files = []
