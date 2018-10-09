@@ -326,4 +326,4 @@ with tf.Session() as sess:
 sess.close()
 env.close()
 
-plt.plot(agent.reward_list)
+plt.plot(agent.reward_list)plt.plot(agent.reward_list)
