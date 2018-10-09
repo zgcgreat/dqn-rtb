@@ -40,6 +40,7 @@ class environment:
         self.cpm = 0
         self.winning_rate = 0
         self.winning_value = 0
+        self.termination = True
         
         #We also have to define the space of allowed actions:
         self.actions = [-0.08, -0.03, -0.01, 0, 0.01, 0.03, 0.08]
@@ -91,9 +92,9 @@ class environment:
         action = self.actions[action_index]
         self.Lambda = self.Lambda*(1 + action)
         
-        ctr_estimations = self.ctr_estimations[self.step_length:]
+        ctr_estimations = self.ctr_estimations[:self.step_length]
         bids = ctr_estimations*self.Lambda
-        winning_bids = self.winning_bids = self.winning_bids[self.step_length:]
+        winning_bids = self.winning_bids = self.winning_bids[:self.step_length]
         
         self.winning_rate = 0
         self.winning_value = 0
@@ -113,7 +114,7 @@ class environment:
         self.n_regulations -= 1 #IS THSI NECESSARY??
         self.time_step += 1
         if (self.time_step == self.episode_length):
-            termination = True
+            self.termination = True
             #SHOULD THSI COME BEFORE? I.E. MAKE THE WHOLE FUNCTION AS
             #AS IF-ELSE STATEMENTS W.R.T TERMINATION.
         
@@ -123,44 +124,56 @@ class environment:
                                  self.Lambda])
         
         reward = self.winning_value #IS THIS NECESSARY? CONSIDERING STATE!
-        #We also need to consider the cost?
+        #We also need to consider the cost
     
-        return (self.state, reward, termination)  
+        return (self.state, reward, self.termination)  
 
 
 ###DATA------------------------------------------------------------------------
 
 #os.listdir(...)
 
+camp_n = ['1458']
 
-camp_n = ['1458', '2259', '2261', '2821', '2997', '3358', '3386', '3427', '3476']
-data_type = ['test.theta', 'train.theta']
+#, '2259', '2261', '2821', '2997', '3358', '3386', '3427', '3476']
+#data_type = ['test.theta', 'train.theta']
 training_files = []
-test_files = []
+#test_files = []
 
 for i in camp_n:
     training_files.append(open(os.path.join\
-                            ('', 
-                             'train.theta'+'_'+i+'.txt')))
-    test_files.append(open(os.path.join\
-                            ('', 
-                             'test.theta'+'_'+i+'.txt')))
+                            (os.getcwd(), 
+                             'iPinYou_data\\train.theta'+'_'+i+'.txt')))
+#    test_files.append(open(os.path.join\
+#                            (os.getcwd(), 
+#                             'iPinYou_data\\test.theta'+'_'+i+'.txt')))
 
-training = []
+data = []
 
 for i in training_files:
     T = i.read().split(' ')
     T.pop(0)
-#    training.append[T]
-#    
-#for i in range(len(training)):
-#    for j in range(len(training[i])):
-#        if (j % 2 == 0):
-#            training[i][j] = float(training[i][j][:-2])
-#        else:
-#            training[i][j] = float(training[i][j])
-#    
+    data.append(T)
+    
+observation_count = 0
+for i in range(len(camp_n)):
+    observation_count += len(data[i])/2
+    
+ctr_estimations = np.zeros(int(observation_count))
+winning_bids = np.zeros(int(observation_count))
 
+winning_bids_counter = 0
+ctr_estimations_counter = 0
+for i in range(len(data)):
+    for j in range(len(data[i])):
+        if (j % 2 == 0):
+            winning_bids[winning_bids_counter] = float(data[i][j])
+            winning_bids_counter += 1
+        else:
+            ctr_estimations[ctr_estimations_counter] = float(data[i][j][:-2])
+            ctr_estimations_counter += 1
+
+rtb_environment = environment(ctr_estimations, winning_bids)
 
 ###EXPERIMENTS-----------------------------------------------------------------
 
