@@ -48,7 +48,7 @@ class environment:
         #of an episode:
         self.step_length = 1000
         self.episode_length = 100
-        #This means that any episode will contain ten million bids
+        #This means that any episode will contain 100*1000 bids
         
         #Finally, we have to initialize the Lambda:
         self.Lambda = 0
@@ -76,7 +76,7 @@ class environment:
                                  self.Lambda])
         
         reward = 0
-        #We also need to consider the cost
+        #We also need to consider the cost?
         termination = False
 
         return (self.state, reward, termination)        
@@ -123,7 +123,7 @@ class environment:
                                  self.Lambda])
         
         reward = self.winning_value #IS THIS NECESSARY? CONSIDERING STATE!
-        #We also need to consider the cost
+        #We also need to consider the cost?
     
         return (self.state, reward, termination)  
 
@@ -132,6 +132,7 @@ class environment:
 
 #os.listdir(...)
 
+#We import the campaigns from the iPinYou dataset.
 camp_n = ['1458', '2259', '2261', '2821']
 data_type = ['test.theta', 'train.theta']
 imported_files = []
