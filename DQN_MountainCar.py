@@ -106,7 +106,7 @@ class replay_memory:
         counter = 0
         
         while (counter < batch_size):
-            index = np.random.randint(0, len(self.storage))
+            index = np.random.randint(len(self.storage))
             if (index not in random_points):
                 A.append(self.storage[index][0])
                 S[counter, :] = self.storage[index][1]
