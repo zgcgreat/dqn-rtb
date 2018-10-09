@@ -9,24 +9,38 @@ import gym
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import os
 
 class q_estimator:
     """
     This class will initialize and build our model, i.e. the DQN. The DQN
     will be a fully-connected feed forward NN (using tensorflow).
     """
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_size, variable_scope):
+        self.scope = variable_scope
         self.state_size = state_size
         self.action_size = action_size
         
         #We define the state and action placeholder, i.e. the inputs and targets:
-        self.input_pl = tf.placeholder(dtype=np.float32, shape=(None, self.state_size), name='input_pl')
-        self.target_pl = tf.placeholder(dtype=np.float32, shape=(None, self.action_size), name='output_pl')
+        self.input_pl = tf.placeholder(dtype=np.float32, shape=(None, self.state_size),\
+                                       name=self.scope+'input_pl')
+        self.target_pl = tf.placeholder(dtype=np.float32, shape=(None, self.action_size),\
+                                        name=self.scope+'output_pl')
         
         #We define the network itself:
-        self.input_layer = tf.layers.dense(self.input_pl, 50, activation=tf.nn.relu)
-        self.hidden_layer = tf.layers.dense(self.input_layer, 50, activation=tf.nn.relu)
-        self.output_layer = tf.layers.dense(self.hidden_layer, self.action_size)
+        self.input_layer = tf.layers.dense(self.input_pl, 32, activation=tf.nn.relu,\
+                                           kernel_initializer=tf.initializers.random_normal,
+                                           bias_initializer=tf.initializers.random_normal,
+                                           name=self.scope+'.input_layer')
+        self.hidden_layer = tf.layers.dense(self.input_layer, 32, activation=tf.nn.relu,\
+                                           kernel_initializer=tf.initializers.random_normal,
+                                           bias_initializer=tf.initializers.random_normal,
+                                           name=self.scope+'.hidden_layer')
+        self.output_layer = tf.layers.dense(self.hidden_layer, self.action_size,\
+                                            activation=None,\
+                                           kernel_initializer=tf.initializers.random_normal,
+                                           bias_initializer=tf.initializers.random_normal,
+                                           name=self.scope+'.output_layer')
         
         #We define the properties of the network:
         self.loss = tf.losses.mean_squared_error(self.target_pl, self.output_layer)
@@ -55,10 +69,13 @@ class q_estimator:
         """
         sess.run(self.optimizer, 
                  feed_dict={self.input_pl: inputs, self.target_pl: targets})
-        print(sess.run(self.loss, 
-                       feed_dict={self.input_pl: inputs, self.target_pl: targets}))
-        
-    
+#        print(sess.run(self.loss, 
+#                       feed_dict={self.input_pl: inputs, self.target_pl: targets}))
+#        if (sess.run(self.loss, 
+#                       feed_dict={self.input_pl: inputs, self.target_pl: targets}) > 30):
+#            print(inputs)
+#            print(targets)
+
 class replay_memory:
     """
     This class will define and construct the replay memory.
@@ -190,14 +207,14 @@ class agent:
         
         #Now we define the q-estimator that the agent will use, as well as the
         #memory and the e-greedy policy:
-        self.q_estimator = q_estimator(self.state_size, self.action_size)
-#        self.q_target = q_estimator(self.state_size, self.action_size)
+        self.q_estimator = q_estimator(self.state_size, self.action_size, 'q_estimator')
+        self.q_target = q_estimator(self.state_size, self.action_size, 'q_target')
         self.e_greedy_policy = e_greedy_policy(self.epsilon_max, self.epsilon_min,
                                                self.epsilon_decay_rate)
         self.replay_memory = replay_memory(self.memory_cap, self.batch_size)
         
         self.sess.run(self.q_estimator.var_init)
-#        self.sess.run(self.q_target.var_init)
+        self.sess.run(self.q_target.var_init)
         
         
     def action(self, state):
@@ -218,8 +235,7 @@ class agent:
         next_state_matrix, termination_list = self.replay_memory.get_sample()
         
         current_q = self.q_estimator.predict_batch(self.sess, state_matrix)
-        next_q = self.q_estimator.predict_batch(self.sess, next_state_matrix)
-#        next_q = self.q_target.predict_batch(self.sess, next_state_matrix)
+        next_q = self.q_target.predict_batch(self.sess, next_state_matrix)
         
         for i in range(len(action_list)):
             if (termination_list[i] == True):
@@ -230,6 +246,25 @@ class agent:
                 
         self.q_estimator.train_batch(self.sess, state_matrix, current_q)
         
+    def target_network_update(self, polyak_tau=0.95):
+        """
+        This function copies the weights from the DQN to the target network,
+        i.e. from q_estimator to q_target.
+        """
+        estimator_params = [t for t in tf.trainable_variables() if\
+                            t.name.startswith(self.q_estimator.scope)]
+        estimator_params = sorted(estimator_params, key=lambda v:v.name)
+        target_params = [t for t in tf.trainable_variables() if\
+                         t.name.startswith(self.q_target.scope)]
+        target_params = sorted(target_params, key=lambda v:v.name)
+        
+        update_ops = []
+        
+        for e1_v, e2_v in zip(estimator_params, target_params):
+            op = e2_v.assign(polyak_tau*e1_v + (1 - polyak_tau)*e2_v)
+            update_ops.append(op)
+            
+        self.sess.run(update_ops)
     
         
         
@@ -237,12 +272,12 @@ class agent:
 
 epsilon_max = 1
 epsilon_min = 0.01
-epsilon_decay_rate = 0.0001
+epsilon_decay_rate = 0.000075
 discount_factor = 0.99
-batch_size = 30
-memory_cap = 50000
-#update_frequency = 1
-episodes_n = 400
+batch_size = 32
+memory_cap = 20000
+update_frequency = 200
+episodes_n = 500
 
 tf.reset_default_graph()
 
@@ -259,8 +294,8 @@ with tf.Session() as sess:
     global_step_counter = 0
     
     while (episode_counter < episodes_n):
-#        if (episode_counter % 10 == 0):
-#            print('Episode {} of {}'.format(episode_counter, episodes_n))
+        if (episode_counter % 10 == 0):
+            print('Episode {} of {}'.format(episode_counter, episodes_n))
 
             
         state = env.reset()
@@ -268,13 +303,6 @@ with tf.Session() as sess:
         while not termination:
             action = agent.action(state)
             next_state, reward, termination = env.step(action)[:3]
-            if next_state[0] >= 0.1:
-                reward += 10
-            elif next_state[0] >= 0.25:
-                reward += 20
-            elif next_state[0] >= 0.5:
-                reward += 100
-                
             agent.reward_episode += reward
             
             memory_sample = (action, state, reward, next_state, termination)
@@ -282,13 +310,13 @@ with tf.Session() as sess:
             
             global_step_counter += 1
             agent.q_learning()
-#            if (global_step_counter % update_frequency == 0):
-#                agent.q_target = agent.q_estimator
+            if (global_step_counter % update_frequency == 0):
+                agent.target_network_update()
             
             agent.e_greedy_policy.epsilon_update(global_step_counter)
             
-#        print("Step {},Episode reward: {}, Epsilon: {}"\
-#              .format(global_step_counter, agent.reward_episode, agent.e_greedy_policy.epsilon))
+        print("Step {},Episode reward: {}, Epsilon: {}"\
+              .format(global_step_counter, agent.reward_episode, agent.e_greedy_policy.epsilon))
         
         agent.reward_list.append(agent.reward_episode)
         agent.reward_episode = 0
