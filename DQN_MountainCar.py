@@ -43,15 +43,14 @@ class q_estimator:
     
     def predict_batch(self, sess, states):
         """
-        This function takes a vector of a batch of states and makes predictions
+        This function takes a batch of states and makes predictions
         for all of them.
         """
         return sess.run(self.output_layer, feed_dict={self.input_pl: states})
     
     def train_batch(self, sess, inputs, targets):
         """
-        This function takes a batch of examples to train the network. We don't
-        return the loss since we can do that using self.loss.
+        This function takes a batch of examples to train the network.
         """
         sess.run(self.optimizer, 
                  feed_dict={self.input_pl: inputs, self.target_pl: targets})
