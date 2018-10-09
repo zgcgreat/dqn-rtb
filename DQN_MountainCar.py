@@ -57,7 +57,6 @@ class q_estimator:
     
     def predict_batch(self, sess, states):
         """
-        This function takes a vector of a batch of states and makes predictions
         This function takes a batch of states and makes predictions
         for all of them.
         """
@@ -65,8 +64,6 @@ class q_estimator:
     
     def train_batch(self, sess, inputs, targets):
         """
-        This function takes a batch of examples to train the network. We don't
-        return the loss since we can do that using self.loss.
         This function takes a batch of examples to train the network.
         """
         sess.run(self.optimizer, 
@@ -126,7 +123,6 @@ class replay_memory:
         counter = 0
         
         while (counter < batch_size):
-            index = np.random.randint(0, len(self.storage))
             index = np.random.randint(len(self.storage))
             if (index not in random_points):
                 A.append(self.storage[index][0])
@@ -329,5 +325,4 @@ with tf.Session() as sess:
 sess.close()
 env.close()
 
-plt.plot(agent.reward_list)plt.plot(agent.reward_list)
 plt.plot(agent.reward_list)
