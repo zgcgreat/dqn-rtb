@@ -27,11 +27,7 @@ class q_estimator:
                                         name=self.scope + 'output_pl')
 
         """We define the architecture of the network:"""
-        self.input_layer = tf.layers.dense(self.input_pl, 100, activation=tf.nn.relu,
-                                           kernel_initializer=tf.initializers.random_normal,
-                                           bias_initializer=tf.initializers.random_normal,
-                                           name=self.scope + '.input_layer')
-        self.first_hidden_layer = tf.layers.dense(self.input_layer, 100, activation=tf.nn.relu,
+        self.first_hidden_layer = tf.layers.dense(self.input_pl, 100, activation=tf.nn.relu,
                                             kernel_initializer=tf.initializers.random_normal,
                                             bias_initializer=tf.initializers.random_normal,
                                             name=self.scope + '.first_hidden_layer')
@@ -39,7 +35,11 @@ class q_estimator:
                                             kernel_initializer=tf.initializers.random_normal,
                                             bias_initializer=tf.initializers.random_normal,
                                             name=self.scope + '.second_hidden_layer')
-        self.output_layer = tf.layers.dense(self.second_hidden_layer, self.action_size,
+        self.third_hidden_layer = tf.layers.dense(self.second_hidden_layer, 100, activation=tf.nn.relu,
+                                            kernel_initializer=tf.initializers.random_normal,
+                                            bias_initializer=tf.initializers.random_normal,
+                                            name=self.scope + '.third_hidden_layer')
+        self.output_layer = tf.layers.dense(self.third_hidden_layer, self.action_size,
                                             activation=None, kernel_initializer=tf.initializers.random_normal,
                                             bias_initializer=tf.initializers.random_normal,
                                             name=self.scope+'.output_layer')
