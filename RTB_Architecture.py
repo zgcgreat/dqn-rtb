@@ -201,13 +201,13 @@ initial_Lambda = 0.001
 
 tf.reset_default_graph()
 
-rtb_environment = environment(ctr_estimations, winning_bids)
-
-episode_counter = 0
-
-while episode_counter < episodes_n
-    state = rtb_environment.reset(budget, initial_Lambda)
-    termination = False
-
-    while not termination:
+#rtb_environment = environment(ctr_estimations, winning_bids)
+#
+#episode_counter = 0
+#
+#while episode_counter < episodes_n
+#    state = rtb_environment.reset(budget, initial_Lambda)
+#    termination = False
+#
+#    while not termination:
 
