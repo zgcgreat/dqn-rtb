@@ -311,13 +311,14 @@ for camp_id, camp_data in train_file_dict.items():
 
             global_step_counter += 1
 
-        episode_name = 'EPISODE {} from CAMP {}'.format(episode_counter, camp_id)
-        print('EPISODE {} from CAMP {}::: epsilon = {:.2f}, budget = {:.2f}'
+        episode_name = 'Episode {} from camp {}'.format(episode_counter, camp_id)
+        print('Episode {} from camp {}::: epsilon = {:.2f}, budget = {:.2f}'
               .format(episode_counter, camp_id, agent.e_greedy_policy.epsilon, budget))
         rtb_environment.episode_result(episode_name)
         episode_counter += 1
 
     print('CAMP {} has finished'.format(camp_id))
+    episode_counter = 0
     for name, item in camp_data.items():
         del item
 
