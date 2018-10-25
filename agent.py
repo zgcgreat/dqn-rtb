@@ -8,21 +8,25 @@ from replay_memory import replay_memory
 
 class agent:
     """
-    This class constructs and defines all the properties of the agent. It has
-    to contain the DQN, the e-greedy policy and the replay memory, with the
-    ability to train the target DQN using the replay memory. It also lets us
-    create and maintain a target network, which we will use to train the
-    estimator.
+    This class incorporates the NN-based approximator of the Q-function,
+    the replay memory and an e-greedy policy to create the bidding agent.
+    The class contains the actual Q-learning and a function which copies
+    the weights to the target network.
     """
-
     def __init__(self, epsilon_max, epsilon_min, epsilon_decay_rate,
                  discount_factor, batch_size, memory_cap,
                  state_size, action_size, sess):
         """
-        We do not include a state in the initialization of the
-        agent since this is exogenous. However, we initialize
-        both networks and initialize all of their variables
-        through tensorflow.
+
+        :param epsilon_max: initial epsilon for the exploration-intensive phase
+        :param epsilon_min: epsilon value to which the agent converges over time
+        :param epsilon_decay_rate: rate at which the epsilon decays exponentially
+        :param discount_factor: discount factor for future rewards
+        :param batch_size: size of mini-batches used in Q-learning
+        :param memory_cap: maximum size of the replay memory
+        :param state_size: dimensionality of the state
+        :param action_size: number of possible actions
+        :param sess: tensorflow session used to initialize, use and train the networks
         """
         self.epsilon_max = epsilon_max
         self.epsilon_min = epsilon_min
@@ -34,16 +38,9 @@ class agent:
         self.action_size = action_size
         self.sess = sess
 
-        """We also define some environment-related features that can be useful:"""
-        self.reward_episode = 0
-        self.reward_list = []
-
-        """Now we define the q-estimator that the agent will use, as well as the
-        memory and the e-greedy policy:"""
         self.q_estimator = q_estimator(self.state_size, self.action_size, 'q_estimator')
         self.q_target = q_estimator(self.state_size, self.action_size, 'q_target')
-        self.e_greedy_policy = e_greedy_policy(self.epsilon_max, self.epsilon_min,
-                                               self.epsilon_decay_rate)
+        self.e_greedy_policy = e_greedy_policy(self.epsilon_max, self.epsilon_min, self.epsilon_decay_rate)
         self.replay_memory = replay_memory(self.memory_cap, self.batch_size)
 
         self.sess.run(self.q_estimator.var_init)
@@ -51,19 +48,17 @@ class agent:
 
     def action(self, state):
         """
-        This function uses the e-greedy policy defined in the previous class
-        to choose an action.
+        :param state: current state in which the agent has to act
+        :return: action (index) based on e-greedy policy and estimated future returns
         """
         return self.e_greedy_policy.action(self.sess, state, self.q_estimator)
 
     def q_learning(self):
         """
-        This function uses the replay memory and the DQN to train the
-        DQN. We use the target DQN (i.e. self.q_target) to create an
-        action-value estimate for the subsequent states. Then, we update
-        the specific action-values using the Bellman equation.
+        :return: updated (trained) local network using the target network, discount factor
+        and a randomized mini-batch of experiences from the replay memory.
         """
-        action_list, state_matrix, reward_vector, \
+        action_list, state_matrix, reward_vector,\
         next_state_matrix, termination_list = self.replay_memory.get_sample()
 
         current_q = self.q_estimator.predict_batch(self.sess, state_matrix)
@@ -80,8 +75,11 @@ class agent:
 
     def target_network_update(self, polyak_tau=0.95):
         """
-        This function copies the weights from the estimator to the target network,
-        i.e. from q_estimator to q_target.
+        :param polyak_tau: parameter which regulates the degree to which the
+        target network should be updated using local network, e.g.
+        polyak_tau = 1 means complete copying of weights from local network
+        to target network.
+        :return: updated target network with weights from local network
         """
         estimator_params = [t for t in tf.trainable_variables() if \
                             t.name.startswith(self.q_estimator.scope)]

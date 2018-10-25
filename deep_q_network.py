@@ -4,24 +4,28 @@ import tensorflow as tf
 
 class q_estimator:
     """
-    This class will initialize and build our model, i.e. the DQN. The DQN
-    will be a feed-forward neural network with three hidden layers each
-    consisting of 100 neurons. This is the architecture as described
-    in the paper.
+    This clas creates and manages the networks which will be incorporated
+    into the agent. The structure of the network(s) follow Wu et al. (2018),
+    with three hidden layers with 100 neurons each.
     """
-
     def __init__(self, state_size, action_size, variable_scope):
+        """
+        :param state_size: the dimensionality of the state, which determines
+        the size of the input
+        :param action_size: the number of possible actions, which determines
+        the size of the output
+        :param variable_scope: categorizes the names of the tf-variables for
+        the local network and the target network.
+        """
         self.scope = variable_scope
         self.state_size = state_size
         self.action_size = action_size
 
-        """"We define the state and action placeholder, i.e. the inputs and targets:"""
         self.input_pl = tf.placeholder(dtype=np.float32, shape=(None, self.state_size),
                                        name=self.scope + 'input_pl')
         self.target_pl = tf.placeholder(dtype=np.float32, shape=(None, self.action_size),
                                         name=self.scope + 'output_pl')
 
-        """We define the architecture of the network:"""
         self.first_hidden_layer = tf.layers.dense(self.input_pl, 100, activation=tf.nn.relu,
                                                   kernel_initializer=tf.initializers.random_normal,
                                                   bias_initializer=tf.initializers.random_normal,
@@ -39,29 +43,37 @@ class q_estimator:
                                             bias_initializer=tf.initializers.random_normal,
                                             name=self.scope + '.output_layer')
 
-        """We define the properties of the network:"""
         self.loss = tf.losses.mean_squared_error(self.target_pl, self.output_layer)
         self.optimizer = tf.train.AdamOptimizer().minimize(self.loss)
-
         self.var_init = tf.global_variables_initializer()
 
     def predict_single(self, sess, state):
         """
-        This function takes a single state and makes a prediction for it.
+        :param sess: current tf-session used
+        :param state: current state for which we want to estimate the value
+        of taking certain actions
+        :return: estimated value of taking certain actions
         """
         return sess.run(self.output_layer,
                         feed_dict={self.input_pl: np.expand_dims(state, axis=0)})
 
     def predict_batch(self, sess, states):
         """
-        This function takes a batch of states and makes predictions
-        for all of them.
+        :param sess: current tf-session used
+        :param states: batch of states for which we want to estimate values of
+        taking certain actions
+        :return: estimated values of taking certain actions in a single tensor
         """
         return sess.run(self.output_layer, feed_dict={self.input_pl: states})
 
     def train_batch(self, sess, inputs, targets):
         """
-        This function takes a batch of examples to train the network.
+        :param sess: current tf-session used
+        :param inputs: batch of inputs, i.e. states, for which we want to train our
+        network
+        :param targets: target values with which we want to train our network,
+        i.e. estimated returns from taking certain actions
+        :return: updated (trained) network
         """
         sess.run(self.optimizer,
                  feed_dict={self.input_pl: inputs, self.target_pl: targets})

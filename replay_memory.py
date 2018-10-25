@@ -2,23 +2,24 @@ import numpy as np
 
 class replay_memory:
     """
-    This class will define and construct the replay memory, as well as
-    contain function which lets us add to and sample from the replay
-    memory.
+    This class will create and manage the replay memory, letting us add
+    and extract (batches of) samples.
     """
-
     def __init__(self, memory_cap, batch_size):
+        """
+        :param memory_cap: maximum size of the replay memory
+        :param batch_size: size of mini-batches sampled from the replay memory
+        """
         self.memory_cap = memory_cap
         self.batch_size = batch_size
         self.storage = []
 
     def store_sample(self, sample):
         """
-        This function lets us add samples to our replay memory and checks
-        whether the replay memory has reached its cap. Every sample has to be
-        a tuple of length 5, including the state, the action, the next state,
-        the reward and a boolean variable telling us if we've reached a
-        terminal state or not.
+        :param sample: a tuple of state, action, next state, reward and
+        termination boolean
+        :return: updated replay memory, including the new sample and without
+        the "oldest" sample if the memory cap has been reached.
         """
         if len(self.storage) == self.memory_cap:
             self.storage.pop(0)
@@ -28,10 +29,7 @@ class replay_memory:
 
     def get_sample(self):
         """
-        This function retrieves a number of samples from the replay memory
-        corresponding to the batch_size. Due to subsequent training, we return
-        the retrieved samples as separate vectors, matrices and lists (in the
-        case of the boolean variables for terminal states).
+        :return: a mini-batch of samples from the replay memory
         """
         if len(self.storage) <= self.batch_size:
             batch_size = len(self.storage)
