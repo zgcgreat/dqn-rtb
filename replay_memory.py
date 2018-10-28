@@ -13,6 +13,7 @@ class replay_memory:
         self.memory_cap = memory_cap
         self.batch_size = batch_size
         self.storage = []
+        np.random.seed(1)
 
     def store_sample(self, sample):
         """
@@ -44,7 +45,7 @@ class replay_memory:
 
         random_points = []
         counter = 0
-
+        np.random.seed(1)
         while counter < batch_size:
             index = np.random.randint(0, len(self.storage))
             if index not in random_points:

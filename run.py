@@ -74,6 +74,6 @@ if __name__ == '__main__':
             del item
 
     del train_file_dict
-    test(agent, test_file_dict, budget_scaling)
+    multi_camp_test(agent, test_file_dict, budget_scaling)
 
     sess.close()
