@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import pickle as pickle
+import matplotlib.pyplot as plt
 
 
 class RTB_environment:
@@ -30,7 +31,7 @@ class RTB_environment:
         # self.click_data = list(camp_dict['data']['click'])
         # camp_dict = None
 
-        self.episode_dict = {'auctions':0, 'impressions':0, 'click':0, 'cost':0, 'win-rate':0, 'eCPC':0}
+        self.result_dict = {'auctions':0, 'impressions':0, 'click':0, 'cost':0, 'win-rate':0, 'eCPC':0, 'eCPI':0}
 
         self.actions = [-0.08, -0.03, -0.01, 0, 0.01, 0.03, 0.08]
 
@@ -39,17 +40,19 @@ class RTB_environment:
 
         self.Lambda = 1
         self.time_step = 0
-        self.budget = 0
+        self.budget = 1
+        self.init_budget = 1
         self.n_regulations = 0
         self.budget_consumption_rate = 0
         self.winning_rate = 0
         self.cost = 0
         self.ctr_value = 0
         self.click = 0
+        self.impressions = 0
         self.termination = True
 
-        self.state = [self.time_step, self.budget, self.n_regulations,
-                      self.budget_consumption_rate, self.cost,
+        self.state = [self.budget / self.init_budget, self.n_regulations,
+                      self.budget_consumption_rate,
                       self.winning_rate, self.ctr_value]
 
     def get_camp_data(self):
@@ -92,23 +95,44 @@ class RTB_environment:
         :return: initial state, zero reward and a false termination bool
         """
         self.budget = budget
+        self.init_budget = budget
         self.Lambda = initial_Lambda
         self.n_regulations = self.episode_length
+        self.time_step = 0
 
+        ctr_estimations, winning_bids, clicks = self.get_camp_data()
+        bids = [int(i * (1 / self.Lambda)) for i in ctr_estimations]
+        budget = self.budget
         self.budget_consumption_rate = 0
         self.winning_rate = 0
         self.ctr_value = 0
         self.click = 0
+        self.impressions = 0
 
-        self.state = [self.time_step, self.budget, self.n_regulations,
-                      self.budget_consumption_rate, self.cost,
+        for i in range(min(self.data_count, self.step_length)):
+            if bids[i] > winning_bids[i] and budget > bids[i]:
+                budget -= winning_bids[i]
+                self.impressions += 1
+                self.cost += winning_bids[i]
+                self.click += clicks[i]
+                self.ctr_value += ctr_estimations[i]
+                self.winning_rate += 1 / min(self.data_count, self.step_length)
+            else:
+                continue
+
+        self.state = [self.budget / self.init_budget, self.n_regulations,
+                      self.budget_consumption_rate,
                       self.winning_rate, self.ctr_value]
 
-        reward = 0
-        self.termination = False
-        self.time_step = 0
+        self.budget_consumption_rate = (self.budget - budget) / self.budget
+        self.budget = budget
+        self.n_regulations -= 1
+        self.time_step += 1
 
-        return (self.state, reward, self.termination)
+        reward = self.ctr_value
+        self.termination = False
+
+        return self.state, reward, self.termination
 
     # def reward_function(self, ctr, clicks):
     #     """
@@ -135,86 +159,61 @@ class RTB_environment:
         self.Lambda = self.Lambda*(1 + action)
         ctr_estimations, winning_bids, clicks = self.get_camp_data()
 
-        bids = ctr_estimations*(1/self.Lambda)
+        bids = [int(i*(1/self.Lambda)) for i in ctr_estimations]
         budget = self.budget
         self.click = 0
         self.cost = 0
         self.ctr_value = 0
         self.winning_rate = 0
+        self.impressions = 0
 
         for i in range(min(self.data_count, self.step_length)):
             if bids[i] > winning_bids[i] and budget > bids[i]:
                 budget -= winning_bids[i]
+                self.impressions += 1
+                self.cost += winning_bids[i]
                 self.click += clicks[i]
                 self.ctr_value += ctr_estimations[i]
                 self.winning_rate += 1 / min(self.data_count, self.step_length)
             else:
                 continue
 
-        self.cost = self.budget - budget
-        self.episode_dict['auctions'] += min(self.data_count, self.step_length)
-        self.episode_dict['impressions'] += self.winning_rate * self.camp_dict['imp']
-        self.episode_dict['click'] += self.click
-        self.episode_dict['cost'] += self.cost
-        self.episode_dict['win-rate'] += self.winning_rate * min(self.data_count, self.step_length) / self.camp_dict['imp']
+        self.result_dict['impressions'] += self.impressions
+        self.result_dict['click'] += self.click
+        self.result_dict['cost'] += self.cost
+        self.result_dict['win-rate'] += self.winning_rate * min(self.data_count, self.step_length) / self.camp_dict['imp']
 
-        self.budget_consumption_rate = (budget - self.budget) / self.budget
+        self.budget_consumption_rate = (self.budget - budget) / self.budget
         self.budget = budget
         self.n_regulations -= 1
         self.time_step += 1
 
-        if self.data_count == 0:
+        if self.time_step == self.episode_length or self.data_count == 0:
             self.termination = True
 
-        self.state = [self.time_step, self.budget, self.n_regulations,
-                      self.budget_consumption_rate, self.cost,
-                      self.winning_rate, self.ctr_value]
+        self.state = [self.budget / self.init_budget, self.n_regulations,
+                      self.budget_consumption_rate,
+                      self.winning_rate, self.ctr_value] ###CONSIDER THIS!
 
-        reward = self.ctr_value + self.winning_rate
+        reward = self.ctr_value ###CONSIDER THIS!
 
-        return (self.state, reward, self.termination)
+        return self.state, reward, self.termination
 
-    def episode_result(self, episode_name):
+    def result(self):
         """
-        This function takes some "statistics" from the episode and prints
-        the results before it resets them for the next episode.
-        :param episode_name: a string referencing the episode and campaign
-        :return: prints number of auctions, number of impressions won, number of
-        actual clicks, winning rate and effective cost per click.
+        This function returns some statistics from the episode or test
+        :return: number of impressions won, number of
+        actual clicks, winning rate, effective cost per click,
+        and effective cost per impression.
         """
-        if self.episode_dict['click'] == 0:
-            self.episode_dict['eCPC'] = 0
+        if self.result_dict['click'] == 0:
+            self.result_dict['eCPC'] = 0
         else:
-            self.episode_dict['eCPC'] = self.episode_dict['cost'] / self.episode_dict['click']
-        print(episode_name + '::: Auctions: {}, Impressions: {:.1f}, Clicks: {}, Cost: {:.1f}, Winning rate: {:.2f}, eCPC: {:.2f}'
-              .format(self.episode_dict['auctions'], self.episode_dict['impressions'], self.episode_dict['click'],
-                      self.episode_dict['cost'], self.episode_dict['win-rate'], self.episode_dict['eCPC']))
-        for i in self.episode_dict:
-            self.episode_dict[i] = 0
+            self.result_dict['eCPC'] = self.result_dict['cost'] / self.result_dict['click']
+        self.result_dict['eCPI'] = self.result_dict['cost'] / self.result_dict['impressions']
 
-def single_camp_test(agent, camp_id, test_file_dict, budget):
-    """
-    This function tests a bidding agent on a number of auctions from
-    a single campaign and outputs the results, given a certain scaling of the budget
-    to allow for variability in testing.
-    :param agent: this is the trained DQN-based bidding agent
-    :param test_file_dict: a dictionary containing testing data (bids,
-    ctr estimations, clicks), budget, and so on from a single campaign.
-    :param budget_scaling: a scaling parameter for the budget
-    :return:
-    """
-    agent.e_greedy_policy.epsilon = 0
-    number_of_impressions = test_file_dict['imp']
-    #budget = test_file_dict['budget'] * budget_scaling
-    test_environment = RTB_environment(test_file_dict, number_of_impressions, step_length=96)
-    initial_Lambda = 0.00001
-
-    state, reward, termination = test_environment.reset(budget, initial_Lambda)
-    while not termination:
-        action = agent.action(state)
-        next_state, reward, termination = test_environment.step(action)
-        state = next_state
-    test_environment.episode_result('CAMP ' + camp_id + ' test')
+        return self.result_dict['impressions'], self.result_dict['click'], self.result_dict['cost'], \
+               self.result_dict['win-rate'], self.result_dict['eCPC'], self.result_dict['eCPI']
 
 
 def get_data(camp_n):
@@ -227,34 +226,33 @@ def get_data(camp_n):
     campaigns are stored in the dictionaries with their respective names.
     """
     if type(camp_n) != str:
-        return 0
-        # train_file_dict = {}
-        # test_file_dict = {}
-        # data_path = os.path.join(os.getcwd(), 'data\\ipinyou-data')
-        #
-        # for camp in camp_n:
-        #     test_data = pd.read_csv(data_path + '\\' + camp + '\\' + 'test.theta.txt',
-        #                              header=None, index_col=False, sep=' ',names=['click', 'winprice', 'pctr'])
-        #     train_data = pd.read_csv(data_path + '\\' + camp + '\\' + 'train.theta.txt',
-        #                              header=None, index_col=False, sep=' ', names=['click', 'winprice', 'pctr'])
-        #     camp_info = pickle.load(open(data_path + '\\' + camp + '\\' + 'info.txt', "rb"))
-        #     test_budget = camp_info['cost_test']
-        #     train_budget = camp_info['cost_train']
-        #     test_imp = camp_info['imp_test']
-        #     train_imp = camp_info['imp_train']
-        #
-        #     train = {'imp':train_imp, 'budget':train_budget, 'data':train_data}
-        #     test = {'imp':test_imp, 'budget':test_budget, 'data':test_data}
-        #
-        #     train_file_dict[camp] = train
-        #     test_file_dict[camp] = test
+        train_file_dict = {}
+        test_file_dict = {}
+        data_path = os.path.join(os.getcwd(), 'data/ipinyou-data')
+
+        for camp in camp_n:
+            test_data = pd.read_csv(data_path + '/' + camp + '/' + 'test.theta.txt',
+                                     header=None, index_col=False, sep=' ',names=['click', 'winprice', 'pctr'])
+            train_data = pd.read_csv(data_path + '/' + camp + '/' + 'train.theta.txt',
+                                     header=None, index_col=False, sep=' ', names=['click', 'winprice', 'pctr'])
+            camp_info = pickle.load(open(data_path + '/' + camp + '/' + 'info.txt', "rb"))
+            test_budget = camp_info['cost_test']
+            train_budget = camp_info['cost_train']
+            test_imp = camp_info['imp_test']
+            train_imp = camp_info['imp_train']
+
+            train = {'imp':train_imp, 'budget':train_budget, 'data':train_data}
+            test = {'imp':test_imp, 'budget':test_budget, 'data':test_data}
+
+            train_file_dict[camp] = train
+            test_file_dict[camp] = test
     else:
-        data_path = os.path.join(os.getcwd(), 'data\\ipinyou-data')
-        test_data = pd.read_csv(data_path + '\\' + camp_n + '\\' + 'test.theta.txt',
+        data_path = os.path.join(os.getcwd(), 'data/ipinyou-data')
+        test_data = pd.read_csv(data_path + '/' + camp_n + '/' + 'test.theta.txt',
                                 header=None, index_col=False, sep=' ', names=['click', 'winprice', 'pctr'])
-        train_data = pd.read_csv(data_path + '\\' + camp_n + '\\' + 'train.theta.txt',
+        train_data = pd.read_csv(data_path + '/' + camp_n + '/' + 'train.theta.txt',
                                  header=None, index_col=False, sep=' ', names=['click', 'winprice', 'pctr'])
-        camp_info = pickle.load(open(data_path + '\\' + camp_n + '\\' + 'info.txt', "rb"))
+        camp_info = pickle.load(open(data_path + '/' + camp_n + '/' + 'info.txt', "rb"))
         test_budget = camp_info['cost_test']
         train_budget = camp_info['cost_train']
         test_imp = camp_info['imp_test']
@@ -263,4 +261,4 @@ def get_data(camp_n):
         train_file_dict = {'imp': train_imp, 'budget': train_budget, 'data': train_data}
         test_file_dict = {'imp': test_imp, 'budget': test_budget, 'data': test_data}
 
-        return train_file_dict, test_file_dict
+    return train_file_dict, test_file_dict

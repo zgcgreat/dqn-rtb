@@ -8,7 +8,7 @@ class q_estimator:
     into the agent. The structure of the network(s) follow Wu et al. (2018),
     with three hidden layers with 100 neurons each.
     """
-    def __init__(self, state_size, action_size, variable_scope):
+    def __init__(self, state_size, action_size, learning_rate, variable_scope):
         """
         :param state_size: the dimensionality of the state, which determines
         the size of the input
@@ -20,6 +20,7 @@ class q_estimator:
         self.scope = variable_scope
         self.state_size = state_size
         self.action_size = action_size
+        self.learning_rate = learning_rate
 
         self.input_pl = tf.placeholder(dtype=np.float32, shape=(None, self.state_size),
                                        name=self.scope + 'input_pl')
@@ -39,12 +40,12 @@ class q_estimator:
                                                   bias_initializer=tf.initializers.random_normal,
                                                   name=self.scope + '.third_hidden_layer')
         self.output_layer = tf.layers.dense(self.third_hidden_layer, self.action_size,
-                                            activation=None, kernel_initializer=tf.initializers.random_normal,
+                                            activation=tf.nn.relu, kernel_initializer=tf.initializers.random_normal,
                                             bias_initializer=tf.initializers.random_normal,
                                             name=self.scope + '.output_layer')
 
         self.loss = tf.losses.mean_squared_error(self.target_pl, self.output_layer)
-        self.optimizer = tf.train.AdamOptimizer().minimize(self.loss)
+        self.optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=0.95).minimize(self.loss)
         self.var_init = tf.global_variables_initializer()
 
     def predict_single(self, sess, state):
@@ -55,7 +56,7 @@ class q_estimator:
         :return: estimated value of taking certain actions
         """
         return sess.run(self.output_layer,
-                        feed_dict={self.input_pl: np.expand_dims(state, axis=0)})
+                        feed_dict={self.input_pl: np.expand_dims(state, axis=0)})[0]
 
     def predict_batch(self, sess, states):
         """

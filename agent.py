@@ -15,9 +15,8 @@ class agent:
     """
     def __init__(self, epsilon_max, epsilon_min, epsilon_decay_rate,
                  discount_factor, batch_size, memory_cap,
-                 state_size, action_size, sess):
+                 state_size, action_size, learning_rate, sess):
         """
-
         :param epsilon_max: initial epsilon for the exploration-intensive phase
         :param epsilon_min: epsilon value to which the agent converges over time
         :param epsilon_decay_rate: rate at which the epsilon decays exponentially
@@ -36,10 +35,11 @@ class agent:
         self.memory_cap = memory_cap
         self.state_size = state_size
         self.action_size = action_size
+        self.learning_rate = learning_rate
         self.sess = sess
 
-        self.q_estimator = q_estimator(self.state_size, self.action_size, 'q_estimator')
-        self.q_target = q_estimator(self.state_size, self.action_size, 'q_target')
+        self.q_estimator = q_estimator(self.state_size, self.action_size, self.learning_rate, 'q_estimator')
+        self.q_target = q_estimator(self.state_size, self.action_size, self.learning_rate, 'q_target')
         self.e_greedy_policy = e_greedy_policy(self.epsilon_max, self.epsilon_min, self.epsilon_decay_rate)
         self.replay_memory = replay_memory(self.memory_cap, self.batch_size)
 
@@ -51,7 +51,9 @@ class agent:
         :param state: current state in which the agent has to act
         :return: action (index) based on e-greedy policy and estimated future returns
         """
-        return self.e_greedy_policy.action(self.sess, state, self.q_estimator)
+        unimod_test_val = int(self.e_greedy_policy.unimodal_check(self.sess, state, self.q_estimator))
+        action_values = self.q_estimator.predict_single(self.sess, state)
+        return self.e_greedy_policy.action(self.sess, state, self.q_estimator), unimod_test_val, action_values
 
     def q_learning(self):
         """
