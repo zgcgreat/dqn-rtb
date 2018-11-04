@@ -79,7 +79,8 @@ def parameter_camp_test(parameter_list):
                                                             episode_length, step_length)
     sess.close()
 
-    result_dict = {'camp_id':camp_id, 'parameters': parameter_list[1:], 'epsilon':epsilon,
-                   'camp_result': [imp, click, cost, wr, ecpc, ecpi], 'budget':camp_info[0],
+    result_dict = {'camp_id':camp_id, 'parameters': parameter_list[1:], 'epsilon':epsilon, 'total budget':budget,
+                   'auctions': test_file_dict['imp'],
+                   'camp_result': np.array([imp, click, cost, wr, ecpc, ecpi]).tolist(), 'budget':camp_info[0],
                    'lambda':camp_info[1], 'unimod':camp_info[2], 'action values':camp_info[3]}
     return result_dict

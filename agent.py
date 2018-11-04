@@ -53,7 +53,7 @@ class agent:
         """
         unimod_test_val = int(self.e_greedy_policy.unimodal_check(self.sess, state, self.q_estimator))
         action_values = self.q_estimator.predict_single(self.sess, state)
-        return self.e_greedy_policy.action(self.sess, state, self.q_estimator), unimod_test_val, action_values
+        return self.e_greedy_policy.action(self.sess, state, self.q_estimator), unimod_test_val, list(action_values)
 
     def q_learning(self):
         """

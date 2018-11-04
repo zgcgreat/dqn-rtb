@@ -1,4 +1,6 @@
 
+import numpy as np
+
 from rtb_environment import RTB_environment
 
 def drlb_test(test_file_dict, budget, initial_Lambda, agent, episode_length, step_length):
@@ -36,4 +38,5 @@ def drlb_test(test_file_dict, budget, initial_Lambda, agent, episode_length, ste
     impressions, click, cost, win_rate, ecpc, ecpi = test_environment.result()
 
     return impressions, click, cost, win_rate, ecpc, ecpi, \
-           [budget_list, Lambda_list, unimod_test_list, action_value_list]
+           [np.array(budget_list).tolist(), np.array(Lambda_list).tolist(),
+            np.array(unimod_test_list).tolist(), np.array(action_value_list).tolist()]
