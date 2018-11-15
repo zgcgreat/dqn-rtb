@@ -5,6 +5,8 @@ import tensorflow as tf
 from agent import agent
 from rtb_environment import RTB_environment, get_data
 from drlb_test import drlb_test
+from lin_bid_test import lin_bidding_test
+from rand_bid_test import rand_bidding_test
 
 #parameter_list = [camp_id, epsilon_decay_rate, budget_scaling, budget_init_variance, initial_Lambda]
 
@@ -24,18 +26,20 @@ def parameter_camp_test(parameter_list):
     episode_length = 96
 
     camp_id = parameter_list[0]
-    epsilon_decay_rate = parameter_list[1]
-    budget_scaling = parameter_list[2]
-    budget_init_var = parameter_list[3] * budget_scaling
-    initial_Lambda = parameter_list[4]
+    budget_scaling = parameter_list[1]
+    initial_Lambda = parameter_list[2]
+    epsilon_decay_rate = parameter_list[3]
+    budget_init_var = parameter_list[4] * budget_scaling
     step_length = parameter_list[5]
     learning_rate = parameter_list[6]
+    seed = parameter_list[7]
+
 
     action_size = 7
     state_size = 5
     tf.reset_default_graph()
-    np.random.seed(1)
-    tf.set_random_seed(1)
+    np.random.seed(seed)
+    tf.set_random_seed(seed)
     sess = tf.Session()
     rtb_agent = agent(epsilon_max, epsilon_min, epsilon_decay_rate,
                   discount_factor, batch_size, memory_cap,
@@ -78,9 +82,13 @@ def parameter_camp_test(parameter_list):
     imp, click, cost, wr, ecpc, ecpi, camp_info = drlb_test(test_file_dict, budget, initial_Lambda, rtb_agent,
                                                             episode_length, step_length)
     sess.close()
+    lin_bid_result = list(lin_bidding_test(train_file_dict[camp_id], test_file_dict, budget, 'historical'))
+    rand_bid_result = list(rand_bidding_test(train_file_dict[camp_id], test_file_dict, budget, 'uniform'))
+
 
     result_dict = {'camp_id':camp_id, 'parameters': parameter_list[1:], 'epsilon':epsilon, 'total budget':budget,
                    'auctions': test_file_dict['imp'],
                    'camp_result': np.array([imp, click, cost, wr, ecpc, ecpi]).tolist(), 'budget':camp_info[0],
-                   'lambda':camp_info[1], 'unimod':camp_info[2], 'action values':camp_info[3]}
+                   'lambda':camp_info[1], 'unimod':camp_info[2], 'action values':camp_info[3],
+                   'lin_bid_result':lin_bid_result, 'rand_bid_result':rand_bid_result}
     return result_dict

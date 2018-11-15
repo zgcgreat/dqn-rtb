@@ -94,10 +94,10 @@ class RTB_environment:
         :param initial_Lambda: the initial scaling of ctr-estimations to form bids
         :return: initial state, zero reward and a false termination bool
         """
+        self.n_regulations = min(self.episode_length, self.data_count / self.step_length)
         self.budget = budget
-        self.init_budget = budget
+        self.init_budget = budget * self.episode_length / self.n_regulations
         self.Lambda = initial_Lambda
-        self.n_regulations = self.episode_length
         self.time_step = 0
 
         ctr_estimations, winning_bids, clicks = self.get_camp_data()
